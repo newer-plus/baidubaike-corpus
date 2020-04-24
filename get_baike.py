@@ -61,7 +61,7 @@ def main():
 if __name__ == '__main__':
     main()
     while tasks.count() > 0:
-        pool = ThreadPool(32,main)  # 多线程爬取，4是线程数
+        pool = ThreadPool(32,main)  # 多线程爬取，32是线程数
         pool.close()
         pool.join()
 
