@@ -44,7 +44,6 @@ def main():
         u = clean_url(u)
         if not items.find_one({'url': u}):  # 把还没有队列过的链接加入队列
             tasks.update({'url': u}, {'$set': {'url': u}}, upsert=True)
-    # text = re.findall('<div class="content">([\s\S]*?)<div class="content">', web)
     soup = BeautifulSoup(web)
     text = soup.find_all('div', class_='para')
     # 爬取我们所需要的信息，需要正则表达式知识来根据网页源代码而写
