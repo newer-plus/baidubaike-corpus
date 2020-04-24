@@ -30,7 +30,7 @@ header = {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.122 Safari/537.36'}
 
 def main():
-    global count, title
+    global count
     url = tasks.find_one_and_delete({})['url']  # 取出一个url，并且在队列中删除掉
     sess = rq.get(url, headers=header)
     web = sess.content.decode('utf-8', 'ignore')
@@ -53,8 +53,8 @@ def main():
              text])  # 对爬取的结果做一些简单的处理
         title = re.findall(u'<title>(.*?)_百度百科</title>', str(soup.title))[0]
         items.update({'url': url}, {'$set': {'url': url, 'title': title, 'text': text}}, upsert=True)
-    count += 1
-    print('%s, 爬取《%s》，URL: %s, 已经爬取%s' % (datetime.datetime.now(), title, url, count))
+        count += 1
+        print('%s, 爬取《%s》，URL: %s, 已经爬取%s' % (datetime.datetime.now(), title, url, count))
 
 
 if __name__ == '__main__':
