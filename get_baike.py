@@ -15,7 +15,7 @@ tasks.create_index([('url', 'hashed')])  # 建立索引，保证查询速度
 items.create_index([('url', 'hashed')])
 count = items.count()  # 已爬取页面总数
 if tasks.count() == 0:  # 如果队列为空，就把该页面作为初始页面，这个页面要尽可能多超链接
-    tasks.insert({'url': 'http://baike.baidu.com/item/科学'})
+    tasks.insert({'url': 'http://baike.baidu.com/item/python'})
 
 url_split_re = re.compile('[&+]')
 
@@ -31,37 +31,39 @@ header = {
 
 def main():
     global count
-    url = tasks.find_one_and_delete({})['url']  # 取出一个url，并且在队列中删除掉
-    sess = rq.get(url, headers=header)
-    web = sess.content.decode('utf-8', 'ignore')
-    urls = re.findall('href="(/item/.*?)"', web)  # 查找所有站内链接
-    for u in urls:
+    while tasks.count() > 0:
+        url = tasks.find_one_and_delete({})['url']  # 取出一个url，并且在队列中删除掉
         try:
-            u = unquote(str(u))
+            sess = rq.get(url, headers=header)
         except:
-            pass
-        u = 'http://baike.baidu.com' + u
-        u = clean_url(u)
-        if not items.find_one({'url': u}):  # 把还没有队列过的链接加入队列
-            tasks.update({'url': u}, {'$set': {'url': u}}, upsert=True)
-    soup = BeautifulSoup(web)
-    text = soup.find_all('div', class_='para')
-    # 爬取我们所需要的信息，需要正则表达式知识来根据网页源代码而写
-    if text:
-        text = ' '.join(
-            [re.sub('[ \n\r\t\u3000]+', ' ', re.sub('<.*?>|\xa0', '', unescape(str(t))).strip()) for t in
-             text])  # 对爬取的结果做一些简单的处理
-        title = re.findall(u'<title>(.*?)_百度百科</title>', str(soup.title))[0]
-        items.update({'url': url}, {'$set': {'url': url, 'title': title, 'text': text}}, upsert=True)
-        count += 1
-        print('%s, 爬取《%s》，URL: %s, 已经爬取%s' % (datetime.datetime.now(), title, url, count))
+            continue
+        web = sess.content.decode('utf-8', 'ignore')
+        urls = re.findall('href="(/item/.*?)"', web)  # 查找所有站内链接
+        for u in urls:
+            try:
+                u = unquote(str(u))
+            except:
+                continue
+            u = 'http://baike.baidu.com' + u
+            u = clean_url(u)
+            if not items.find_one({'url': u}):  # 把还没有队列过的链接加入队列
+                tasks.update({'url': u}, {'$set': {'url': u}}, upsert=True)
+        soup = BeautifulSoup(web)
+        text = soup.find_all('div', class_='para')
+        # 爬取我们所需要的信息，需要正则表达式知识来根据网页源代码而写
+        if text:
+            text = ' '.join(
+                [re.sub('[ \n\r\t\u3000]+', ' ', re.sub('<.*?>|\xa0', '', unescape(str(t))).strip()) for t in
+                 text])  # 对爬取的结果做一些简单的处理
+            title = re.findall(u'<title>(.*?)_百度百科</title>', str(soup.title))[0]
+            items.update({'url': url}, {'$set': {'url': url, 'title': title, 'text': text}}, upsert=True)
+            count += 1
+            print('%s, 爬取《%s》，URL: %s, 已经爬取%s' % (datetime.datetime.now(), title, url, count))
 
 
 if __name__ == '__main__':
-    main()
-    while tasks.count() > 0:
-        pool = ThreadPool(32,main)  # 多线程爬取，32是线程数
-        pool.close()
-        pool.join()
-
-    #pool.terminate()
+    pool = ThreadPool(4,main)  # 多线程爬取，4是线程数
+    pool.close()
+    pool.join()
+    time.sleep(30)
+    pool.terminate()
