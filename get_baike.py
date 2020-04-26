@@ -9,16 +9,21 @@ from multiprocessing import Pool as ProcessPool
 from multiprocessing.dummy import Pool as ThreadPool
 from bs4 import BeautifulSoup
 
-# pymongo.MongoClient().drop_database('baidubaike')
+#pymongo.MongoClient().drop_database('baidubaike')
 tasks = pymongo.MongoClient().baidubaike.tasks  # 将队列存于数据库中
 items = pymongo.MongoClient().baidubaike.items  # 存放结果
 tasks.create_index([('url', 'hashed')])  # 建立索引，保证查询速度
 items.create_index([('url', 'hashed')])
-count = items.count()  # 已爬取页面总数
+#count = items.count()  # 已爬取页面总数
 if tasks.count() == 0:  # 如果队列为空，就把该页面作为初始页面，这个页面要尽可能多超链接
-    u = 'http://baike.baidu.com/item/python'
-    if not items.find_one({'url': u}):
-        tasks.insert({'url': u})
+    url1 = 'http://baike.baidu.com/item/科学'
+    url2 = 'http://baike.baidu.com/item/人工智能'
+    url3 = 'http://baike.baidu.com/item/python'
+    d1 = {'url': url1}
+    d2 = {'url': url2}
+    d3 = {'url': url3}
+#    if not items.find({'url': {'$in': [url1, url2, url3]}}):
+    tasks.insert_many([d1, d2, d3])
 
 url_split_re = re.compile('[&+]')
 
@@ -36,7 +41,6 @@ header = {
 
 def run():
     def main():
-        global count
         while tasks.count() > 0:
             url = tasks.find_one_and_delete({})['url']  # 取出一个url，并且在队列中删除掉
             try:
@@ -63,8 +67,7 @@ def run():
                      text])  # 对爬取的结果做一些简单的处理
                 title = re.findall(u'<title>(.*?)_百度百科</title>', str(soup.title))[0]
                 items.update({'url': url}, {'$set': {'url': url, 'title': title, 'text': text}}, upsert=True)
-                count += 1
-                print('%s, 爬取《%s》，URL: %s, 已经爬取%s' % (datetime.datetime.now(), title, url, count))
+                print('%s, 爬取《%s》，URL: %s, 已经爬取%s' % (datetime.datetime.now(), title, url, items.count()))
 
     p = ThreadPool(4, main)  # 多线程爬取，4是线程数
     p.close()
@@ -72,7 +75,7 @@ def run():
 
 
 if __name__ == '__main__':
-    pool = ProcessPool(4, run)  # 多进程爬取，4是进程数
+    pool = ProcessPool(4, run)  # 多进程爬取，4是线程数
     pool.close()
     pool.join()
     time.sleep(30)
