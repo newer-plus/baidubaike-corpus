@@ -72,7 +72,7 @@ def run():
 
 
 if __name__ == '__main__':
-    pool = ProcessPool(4, run)  # 多进程爬取，4是线程数
+    pool = ProcessPool(4, run)  # 多进程爬取，4是进程数
     pool.close()
     pool.join()
     time.sleep(30)
