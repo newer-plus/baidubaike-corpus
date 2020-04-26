@@ -15,7 +15,9 @@ tasks.create_index([('url', 'hashed')])  # 建立索引，保证查询速度
 items.create_index([('url', 'hashed')])
 count = items.count()  # 已爬取页面总数
 if tasks.count() == 0:  # 如果队列为空，就把该页面作为初始页面，这个页面要尽可能多超链接
-    tasks.insert({'url': 'http://baike.baidu.com/item/python'})
+    u = 'http://baike.baidu.com/item/python'
+    if not items.find_one({'url':u}):
+        tasks.insert({'url': u})
 
 url_split_re = re.compile('[&+]')
 
