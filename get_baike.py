@@ -7,6 +7,7 @@ import pymongo
 from html import unescape
 from multiprocessing import Pool as ProcessPool
 from multiprocessing.dummy import Pool as ThreadPool
+from multiprocessing import Value
 from bs4 import BeautifulSoup
 
 #pymongo.MongoClient().drop_database('baidubaike')
@@ -14,7 +15,8 @@ tasks = pymongo.MongoClient().baidubaike.tasks  # 将队列存于数据库中
 items = pymongo.MongoClient().baidubaike.items  # 存放结果
 tasks.create_index([('url', 'hashed')])  # 建立索引，保证查询速度
 items.create_index([('url', 'hashed')])
-#count = items.count()  # 已爬取页面总数
+count = items.count()  # 已爬取页面总数
+num = Value('L',count)
 if tasks.count() == 0:  # 如果队列为空，就把该页面作为初始页面，这个页面要尽可能多超链接
     url1 = 'http://baike.baidu.com/item/科学'
     url2 = 'http://baike.baidu.com/item/人工智能'
@@ -67,7 +69,8 @@ def run():
                      text])  # 对爬取的结果做一些简单的处理
                 title = re.findall(u'<title>(.*?)_百度百科</title>', str(soup.title))[0]
                 items.update({'url': url}, {'$set': {'url': url, 'title': title, 'text': text}}, upsert=True)
-                print('%s, 爬取《%s》，URL: %s, 已经爬取%s' % (datetime.datetime.now(), title, url, items.count()))
+                num.value +=1
+                print('%s, 爬取《%s》，URL: %s, 已经爬取%s' % (datetime.datetime.now(), title, url, num.value))
 
     p = ThreadPool(4, main)  # 多线程爬取，4是线程数
     p.close()
