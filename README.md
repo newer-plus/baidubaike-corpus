@@ -1,5 +1,5 @@
 # baidubaike-corpus
-from baidubaike get the corpu
+from baidubaike get the corpus
 
 从百度百科爬取中文语料库
 
